@@ -1,0 +1,43 @@
+﻿body {
+    display: flex;
+    width: 100vw;
+    height: 100vh;
+    align-items: center;
+    justify-content: center;
+}
+
+.Ocean {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    width: 600px;
+    height: 600px;
+    background-color: #B3E5FC;
+    overflow: hidden;
+}
+
+.Wave {
+    width: 1200px;
+    height: 600px;
+    animation-name: swell;
+    animation-duration: 2s;
+    animation-fill-mode: forwards;
+    animation-iteration-count: infinite;
+    animation-timing-function: linear;
+    fill: #4FC3F7;
+}
+
+.wave-info {
+    width: 80vw;
+    overflow: scroll;
+}
+
+/*@keyframes swell {
+    0% {
+        transform: translateX(-50%);
+    }
+
+    100% {
+        transform: translateX(0%);
+    }
+}*/
