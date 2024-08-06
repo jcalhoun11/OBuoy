@@ -105,28 +105,38 @@
         }
 
         string apiAddress = Environment.GetEnvironmentVariable("ApiAddress");
-        HttpClient httpClient = new HttpClient();
-        HttpResponseMessage response = await httpClient.GetAsync($"{apiAddress}/v1/GetMarineWaveAnimation/{waveHeightInFeet}");
-
-        if (response.IsSuccessStatusCode)
+        Console.WriteLine(apiAddress);
+        try
         {
-            var options = new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true,
-                    UnmappedMemberHandling = System.Text.Json.Serialization.JsonUnmappedMemberHandling.Skip,
-                    ReadCommentHandling = JsonCommentHandling.Skip,
-                    AllowTrailingCommas = true,
-                };
+            HttpClient httpClient = new HttpClient();
+            HttpResponseMessage response = await httpClient.GetAsync($"{apiAddress}/v1/GetMarineWaveAnimation/{waveHeightInFeet}");
 
-            WavePath? waveInfo = JsonSerializer.Deserialize<WavePath?>(await response.Content.ReadAsStringAsync(), options);
+            if (response.IsSuccessStatusCode)
+            {
+                var options = new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true,
+                        UnmappedMemberHandling = System.Text.Json.Serialization.JsonUnmappedMemberHandling.Skip,
+                        ReadCommentHandling = JsonCommentHandling.Skip,
+                        AllowTrailingCommas = true,
+                    };
 
-            if (waveInfo is not null)
-                waveAnimation = $"{waveInfo.CrestPath}; {waveInfo.TroughPath}; {waveInfo.CrestPath}";
+                WavePath? waveInfo = JsonSerializer.Deserialize<WavePath?>(await response.Content.ReadAsStringAsync(), options);
+
+                if (waveInfo is not null)
+                    waveAnimation = $"{waveInfo.CrestPath}; {waveInfo.TroughPath}; {waveInfo.CrestPath}";
+            }
+            else
+            {
+
+            }
         }
-        else
+        catch (Exception ex)
         {
-
+            string message = ex.InnerException?.Message ?? ex.Message;
+            Console.WriteLine(message);
         }
+        
     }
 
     int ConvertToFeet(int meters) =>
