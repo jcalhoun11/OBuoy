@@ -28,8 +28,7 @@
 }
 
 .wave-info {
-    width: 80vw;
-    overflow: scroll;
+    width: 600px;
 }
 
 /*@keyframes swell {

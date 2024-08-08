@@ -1,5 +1,7 @@
 ﻿@using System.Text.Json
 @using Microsoft.AspNetCore.WebUtilities
+@using MongoDB.Bson
+@using MongoDB.Driver
 @using OBuoy.Entities.Location
 
 <div class="swell-container">
@@ -19,39 +21,7 @@
 
     </div>
     <div class="wave-info">
-        @if (marineWave is not null)
-        {
-            <table>
-                <tr>
-                    <td>Time: </td>
-                    @foreach (var t in marineWave.hourly.time)
-                    {
-                        <td>@t </td>
-                    }
-                </tr>
-                <tr>
-                    <td>Wave Height: </td>
-                    @foreach (var wh in marineWave.hourly.wave_height)
-                    {
-                        <td>@wh @marineWave.hourly_units.wave_height </td>
-                    }
-                </tr>
-                <tr>
-                    <td>Wave Direction: </td>
-                    @foreach (var wd in marineWave.hourly.wave_direction)
-                    {
-                        <td>@wd @marineWave.hourly_units.wave_direction </td>
-                    }
-                </tr>
-                <tr>
-                    <td>Wave Period: </td>
-                    @foreach (var wp in marineWave.hourly.wave_period)
-                    {
-                        <td>@wp @marineWave.hourly_units.wave_period </td>
-                    }
-                </tr>
-            </table>
-        }
+        WaveHeight: @waveHeightString - WavePeriod: @wavePeriod - WaveModel: @waveModel - Time: @timeString
     </div>
 </div>
 
@@ -63,6 +33,9 @@
 
     string wavePeriod = "5s";
     string waveAnimation = string.Empty;
+    string waveHeightString = "1";
+    string waveModel = "1";
+    string timeString = string.Empty;
 
     HttpClient waveClient = new();
     readonly string marineBase = "https://marine-api.open-meteo.com/v1/marine";
@@ -90,61 +63,50 @@
     {
         List<string> times = marineWave.hourly.time.ToList();
         string localTime = DateTime.Now.Hour.ToString();
-        string timeString = times.FirstOrDefault(x => x.Contains(localTime), "0");
+        timeString = times.FirstOrDefault(x => x.Contains(localTime), "0");
         int index = times.IndexOf(timeString);
         string wp = marineWave.hourly.wave_period[index].ToString();
         if (double.TryParse(wp, out double wave_period))
             wavePeriod = $"{wave_period}s";
 
-        int waveHeightInFeet = 0;
+        int waveHeightInt = 0;
         string waveHeight = marineWave.hourly.wave_height[index].ToString();
         if (double.TryParse(waveHeight, out double waveHeightInMeters))
         {
-            Math.Round(waveHeightInMeters, MidpointRounding.AwayFromZero);
-            waveHeightInFeet = ConvertToFeet(Convert.ToInt32(waveHeightInMeters));
+            double waveHeightInFeet = ConvertToFeet(waveHeightInMeters);
+            waveHeightString = waveHeightInFeet.ToString();
+            Math.Round(waveHeightInFeet, MidpointRounding.AwayFromZero);
+            waveHeightInt = Convert.ToInt32(waveHeightInFeet);
+            waveModel = waveHeightInt.ToString();
         }
 
-        string apiAddress = Environment.GetEnvironmentVariable("ApiAddress");
-        Console.WriteLine(apiAddress);
         try
         {
-            HttpClient httpClient = new HttpClient();
-            HttpResponseMessage response = await httpClient.GetAsync($"{apiAddress}/v1/GetMarineWaveAnimation/{waveHeightInFeet}");
+            string url = Environment.GetEnvironmentVariable("MongoDBConnection") ?? string.Empty;
+            if (url == string.Empty)
+                return;
 
-            if (response.IsSuccessStatusCode)
-            {
-                var options = new JsonSerializerOptions
-                    {
-                        PropertyNameCaseInsensitive = true,
-                        UnmappedMemberHandling = System.Text.Json.Serialization.JsonUnmappedMemberHandling.Skip,
-                        ReadCommentHandling = JsonCommentHandling.Skip,
-                        AllowTrailingCommas = true,
-                    };
+            var mongoClient = new MongoClient(url);
+            var mongoDB = mongoClient.GetDatabase("OBuoy");
+            var waveCollection = mongoDB.GetCollection<WavePath>("WavePath");
+            var query = Builders<WavePath>.Filter.Eq("WaveHeight", waveHeightInt);
+            WavePath? waveInfo = await waveCollection.Find(query).FirstOrDefaultAsync();
 
-                WavePath? waveInfo = JsonSerializer.Deserialize<WavePath?>(await response.Content.ReadAsStringAsync(), options);
-
-                if (waveInfo is not null)
-                    waveAnimation = $"{waveInfo.CrestPath}; {waveInfo.TroughPath}; {waveInfo.CrestPath}";
-            }
-            else
-            {
-
-            }
+            if (waveInfo is not null)
+                waveAnimation = $"{waveInfo.CrestPath}; {waveInfo.TroughPath}; {waveInfo.CrestPath}";
         }
         catch (Exception ex)
         {
+            //Log Error
             string message = ex.InnerException?.Message ?? ex.Message;
-            Console.WriteLine(message);
         }
-        
     }
 
-    int ConvertToFeet(int meters) =>
-        Convert.ToInt32(meters * 3.28);
+    double ConvertToFeet(double meters) => meters * 3.28;
 
     async Task<MarineWave> GetWaveConditions(UserLocation location)
     {
-        
+
         string waveQuery = CreateMarineQuery(location.Latitude.ToString(), location.Longitude.ToString());
         var response = await waveClient.GetAsync(waveQuery);
 
@@ -227,6 +189,7 @@
 
     public class WavePath
     {
+        public object _id { get; set; }
         public int WaveHeight { get; set; }
         public string? CrestPath { get; set; }
         public string? TroughPath { get; set; }
