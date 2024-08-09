@@ -22,7 +22,7 @@ if (!app.Environment.IsDevelopment())
 }
 else
 {
-    Environment.SetEnvironmentVariable("ApiAddress", builder.Configuration["ApiAddress"]);
+    Environment.SetEnvironmentVariable("MongoDBConnection", builder.Configuration["MongoDBConnection"]);
 }
 
 app.UseHttpsRedirection();

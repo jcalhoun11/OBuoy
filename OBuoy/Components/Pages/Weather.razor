@@ -8,9 +8,18 @@
 @using OBuoy.Features.Marine.SwellViewComponent
 <PageTitle>Home</PageTitle>
 
-<GoogleMap @ref="@_gmap" Id="gmap" Options="@mapOptions" OnAfterInit="@AddEventListeners"></GoogleMap>
-<SwellView @ref="@swellView" Location="@userLocation"></SwellView>
-<button @onclick="@GetWaveConditions">Show wave conditions</button>
+<div class="weather-display-container">
+    <div class="map-container">
+        <GoogleMap @ref="@_gmap" Height="600px" Id="gmap" Options="@mapOptions" OnAfterInit="@AddEventListeners"></GoogleMap>
+    </div>
+    <div class="swell-container">
+        <SwellView @ref="@swellView" Location="@userLocation"></SwellView>
+    </div>
+    
+</div>
+
+
+
 @code {
     UserLocation userLocation = new UserLocation() { Latitude = 28.39, Longitude = -86.49 };
     SwellView swellView;
@@ -30,17 +39,15 @@
     async void AddEventListeners()
     {
         if (_gmap is { InteropObject: not null })
-            await _gmap.InteropObject.AddListener<MouseEvent>("click", (e) => OnMapClick(e));
+            await _gmap.InteropObject.AddListener<MouseEvent>("click", async (e) => await OnMapClick(e));
     }
 
-    void OnMapClick(MouseEvent e)
+    async Task OnMapClick(MouseEvent e)
     {
         LatLngLiteral latLng = e.LatLng;
         userLocation.Latitude = latLng.Lat;
         userLocation.Longitude = latLng.Lng;
+        await swellView.LoadNewLocation(userLocation);
         StateHasChanged();
     }
-
-    async Task GetWaveConditions() =>
-        await swellView.LoadNewLocation(userLocation);
 }
