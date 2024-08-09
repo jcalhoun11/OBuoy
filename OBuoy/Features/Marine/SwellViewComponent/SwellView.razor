@@ -35,7 +35,7 @@
     string waveAnimation = string.Empty;
     string waveHeightString = "1";
     string waveModel = "1";
-    string timeString = string.Empty;
+    string? timeString = string.Empty;
 
     HttpClient waveClient = new();
     readonly string marineBase = "https://marine-api.open-meteo.com/v1/marine";
@@ -55,22 +55,25 @@
 
         marineWave = await GetWaveConditions(location);
 
-        if (marineWave is not null)
+        if (marineWave is { elevation: <= 0 })
             await SetMarineWave(marineWave);
     }
 
     async Task SetMarineWave(MarineWave marineWave)
     {
-        List<string> times = marineWave.hourly.time.ToList();
+        List<string?>? times = marineWave?.hourly?.time?.ToList();
+        if (times is null)
+            return;
+
         string localTime = DateTime.Now.Hour.ToString();
-        timeString = times.FirstOrDefault(x => x.Contains(localTime), "0");
-        int index = times.IndexOf(timeString);
-        string wp = marineWave.hourly.wave_period[index].ToString();
+        timeString = times!.FirstOrDefault(x => x!.Contains(localTime), "0");
+        int index = times!.IndexOf(timeString);
+        string? wp = marineWave?.hourly?.wave_period?[index]?.ToString();
         if (double.TryParse(wp, out double wave_period))
             wavePeriod = $"{wave_period}s";
 
         int waveHeightInt = 0;
-        string waveHeight = marineWave.hourly.wave_height[index].ToString();
+        string? waveHeight = marineWave?.hourly?.wave_height?[index].ToString();
         if (double.TryParse(waveHeight, out double waveHeightInMeters))
         {
             double waveHeightInFeet = ConvertToFeet(waveHeightInMeters);
@@ -117,8 +120,11 @@
                     PropertyNameCaseInsensitive = true,
                     UnmappedMemberHandling = System.Text.Json.Serialization.JsonUnmappedMemberHandling.Skip,
                     ReadCommentHandling = JsonCommentHandling.Skip,
+                    DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+                    NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals,
                     AllowTrailingCommas = true,
                 };
+
             MarineWave? waveInfo = JsonSerializer.Deserialize<MarineWave?>(await response.Content.ReadAsStringAsync(), options);
             return waveInfo ?? new MarineWave();
         }
@@ -140,51 +146,51 @@
 
     public class MarineWave
     {
-        public float latitude { get; set; }
-        public float longitude { get; set; }
-        public float generationtime_ms { get; set; }
-        public int utc_offset_seconds { get; set; }
-        public string timezone { get; set; }
-        public string timezone_abbreviation { get; set; }
-        public double elevation { get; set; }
-        public Hourly_Units hourly_units { get; set; }
-        public Hourly hourly { get; set; }
+        public float? latitude { get; set; }
+        public float? longitude { get; set; }
+        public float? generationtime_ms { get; set; }
+        public int? utc_offset_seconds { get; set; }
+        public string? timezone { get; set; }
+        public string? timezone_abbreviation { get; set; }
+        public double? elevation { get; set; }
+        public Hourly_Units? hourly_units { get; set; }
+        public Hourly? hourly { get; set; }
     }
 
     public class Hourly_Units
     {
-        public string time { get; set; }
-        public string wave_height { get; set; }
-        public string wave_direction { get; set; }
-        public string wave_period { get; set; }
-        public string wind_wave_height { get; set; }
-        public string wind_wave_direction { get; set; }
-        public string wind_wave_period { get; set; }
-        public string wind_wave_peak_period { get; set; }
-        public string swell_wave_height { get; set; }
-        public string swell_wave_direction { get; set; }
-        public string swell_wave_period { get; set; }
-        public string swell_wave_peak_period { get; set; }
-        public string ocean_current_velocity { get; set; }
-        public string ocean_current_direction { get; set; }
+        public string? time { get; set; }
+        public string? wave_height { get; set; }
+        public string? wave_direction { get; set; }
+        public string? wave_period { get; set; }
+        public string? wind_wave_height { get; set; }
+        public string? wind_wave_direction { get; set; }
+        public string? wind_wave_period { get; set; }
+        public string? wind_wave_peak_period { get; set; }
+        public string? swell_wave_height { get; set; }
+        public string? swell_wave_direction { get; set; }
+        public string? swell_wave_period { get; set; }
+        public string? swell_wave_peak_period { get; set; }
+        public string? ocean_current_velocity { get; set; }
+        public string? ocean_current_direction { get; set; }
     }
 
     public class Hourly
     {
-        public string[] time { get; set; }
-        public float[] wave_height { get; set; }
-        public int[] wave_direction { get; set; }
-        public float[] wave_period { get; set; }
-        public float[] wind_wave_height { get; set; }
-        public int[] wind_wave_direction { get; set; }
-        public float[] wind_wave_period { get; set; }
-        public object[] wind_wave_peak_period { get; set; }
-        public float[] swell_wave_height { get; set; }
-        public int[] swell_wave_direction { get; set; }
-        public float[] swell_wave_period { get; set; }
-        public object[] swell_wave_peak_period { get; set; }
-        public float[] ocean_current_velocity { get; set; }
-        public int[] ocean_current_direction { get; set; }
+        public string?[]? time { get; set; }
+        public float?[]? wave_height { get; set; }
+        public int?[]? wave_direction { get; set; }
+        public float?[]? wave_period { get; set; }
+        public float?[]? wind_wave_height { get; set; }
+        public int?[]? wind_wave_direction { get; set; }
+        public float?[]? wind_wave_period { get; set; }
+        public object?[]? wind_wave_peak_period { get; set; }
+        public float?[]? swell_wave_height { get; set; }
+        public int?[]? swell_wave_direction { get; set; }
+        public float?[]? swell_wave_period { get; set; }
+        public object?[]? swell_wave_peak_period { get; set; }
+        public float?[]? ocean_current_velocity { get; set; }
+        public int?[]? ocean_current_direction { get; set; }
     }
 
     public class WavePath
